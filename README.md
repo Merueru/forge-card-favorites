@@ -8,8 +8,9 @@ favorite toggles to Extra Networks cards.
 ## Features
 
 - Adds a heart button to Extra Networks cards
+- Mark cards as favorites or remove them from favorites
+- Adds a Favorites Only heart button to show only your favorite cards
 - Stores favorites in browser `localStorage`
-- Adds a Favorites Only filter button to Extra Networks controls
 - No Python dependencies and no startup installer
 
 ## Install
