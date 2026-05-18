@@ -3,6 +3,8 @@
 Small JavaScript-only extension for Stable Diffusion WebUI Forge that adds
 favorite toggles to Extra Networks cards.
 
+![Preview](image/favpic001.png)
+
 ## Features
 
 - Adds a heart button to Extra Networks cards
