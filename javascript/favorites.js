@@ -46,6 +46,10 @@ function injectFavoriteButtons() {
 
     cards.forEach(card => {
 
+        if (card.matches('[data-no-favorite="true"], .forge-prompt-sets-add-card')) {
+            return;
+        }
+
         if (card.querySelector('.forge-favorite-btn')) {
             return;
         }
@@ -123,6 +127,11 @@ function toggleFavoritesOnly() {
     );
 
     cards.forEach(card => {
+
+        if (card.matches('[data-no-favorite="true"], .forge-prompt-sets-add-card')) {
+            card.style.display = '';
+            return;
+        }
 
         const cardName = getCardName(card);
 
