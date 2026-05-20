@@ -1,32 +1,12 @@
-const FAVORITE_STORAGE_KEY = "forgeFavoriteLoras";
 const FAVORITES_ENDPOINT = "/forge-card-favorites/favorites";
 
 const favoriteState = {
     loaded: false,
     loadPromise: null,
-    saveTimer: null,
     favorites: new Set(),
 };
 
 let favoritesOnlyMode = false;
-
-function readLocalFavorites() {
-    try {
-        const values = JSON.parse(localStorage.getItem(FAVORITE_STORAGE_KEY) || "[]");
-        return Array.isArray(values) ? values.filter((value) => typeof value === "string" && value.trim()) : [];
-    } catch (error) {
-        console.warn("[ForgeCardFavorites] Failed to read browser favorites", error);
-        return [];
-    }
-}
-
-function writeLocalFavorites(favorites) {
-    try {
-        localStorage.setItem(FAVORITE_STORAGE_KEY, JSON.stringify(favorites));
-    } catch (error) {
-        console.warn("[ForgeCardFavorites] Failed to update browser favorites backup", error);
-    }
-}
 
 function uniqueFavorites(values) {
     const favorites = [];
@@ -51,7 +31,6 @@ function favoritesArray() {
 
 async function saveFavoritesToServer() {
     const favorites = favoritesArray();
-    writeLocalFavorites(favorites);
 
     try {
         const response = await fetch(FAVORITES_ENDPOINT, {
@@ -62,19 +41,9 @@ async function saveFavoritesToServer() {
         const data = await response.json();
         if (!response.ok || !data.ok) throw new Error(data.error || response.statusText);
     } catch (error) {
-        console.warn("[ForgeCardFavorites] Server favorites save failed; browser backup is still updated", error);
+        console.warn("[ForgeCardFavorites] Favorites were not saved to disk", error);
+        throw error;
     }
-}
-
-function scheduleFavoritesSave() {
-    if (favoriteState.saveTimer) {
-        clearTimeout(favoriteState.saveTimer);
-    }
-
-    favoriteState.saveTimer = setTimeout(() => {
-        favoriteState.saveTimer = null;
-        saveFavoritesToServer();
-    }, 250);
 }
 
 async function loadFavorites() {
@@ -82,31 +51,20 @@ async function loadFavorites() {
     if (favoriteState.loadPromise) return favoriteState.loadPromise;
 
     favoriteState.loadPromise = (async () => {
-        const localFavorites = readLocalFavorites();
-
         try {
             const response = await fetch(FAVORITES_ENDPOINT);
             const data = await response.json();
             if (!response.ok || !data.ok) throw new Error(data.error || response.statusText);
 
-            const serverFavorites = Array.isArray(data.favorites) ? data.favorites : [];
-            const mergedFavorites = uniqueFavorites(serverFavorites.concat(localFavorites));
-            favoriteState.favorites = new Set(mergedFavorites);
+            const favorites = uniqueFavorites(Array.isArray(data.favorites) ? data.favorites : []);
+            favoriteState.favorites = new Set(favorites);
             favoriteState.loaded = true;
-            writeLocalFavorites(mergedFavorites);
-
-            if (mergedFavorites.length !== serverFavorites.length) {
-                scheduleFavoritesSave();
-            }
-
-            return mergedFavorites;
+            return favorites;
         } catch (error) {
-            console.warn("[ForgeCardFavorites] Server favorites unavailable; using browser favorites", error);
-            const fallbackFavorites = uniqueFavorites(localFavorites);
-            favoriteState.favorites = new Set(fallbackFavorites);
+            console.warn("[ForgeCardFavorites] Favorites storage is unavailable", error);
+            favoriteState.favorites = new Set();
             favoriteState.loaded = true;
-            writeLocalFavorites(fallbackFavorites);
-            return fallbackFavorites;
+            return [];
         } finally {
             favoriteState.loadPromise = null;
         }
@@ -168,7 +126,7 @@ function applyFavoritesOnlyFilter() {
 
 function updateFavoritesFilterButtons() {
     gradioApp().querySelectorAll(".forge-favorites-filter-btn").forEach((btn) => {
-        btn.textContent = "❤️";
+        btn.innerHTML = "&#10084;&#65039;";
         btn.style.color = "";
         btn.style.opacity = favoritesOnlyMode ? "1" : "0.75";
         btn.style.filter = favoritesOnlyMode ? "drop-shadow(0 0 6px rgba(255,80,120,0.75))" : "none";
@@ -231,7 +189,7 @@ function injectFavoriteButtons() {
             setHeartState(heart, favoriteState.favorites.has(cardName));
             updateFavoritesFilterButtons();
             applyFavoritesOnlyFilter();
-            saveFavoritesToServer();
+            saveFavoritesToServer().catch(() => {});
         };
 
         card.appendChild(heart);
@@ -253,7 +211,7 @@ function createFavoritesButton() {
 
         const btn = document.createElement("button");
         btn.className = "forge-favorites-filter-btn";
-        btn.textContent = "❤️";
+        btn.innerHTML = "&#10084;&#65039;";
         btn.title = "Favorites only";
 
         btn.style.marginLeft = "0px";
