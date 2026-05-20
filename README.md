@@ -1,4 +1,4 @@
-# Forge Card Favorites
+# Forge Card Favorites ❤️
 
 Small Stable Diffusion WebUI Forge extension that adds favorite toggles to Extra
 Networks cards.
