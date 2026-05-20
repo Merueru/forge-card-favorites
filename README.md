@@ -1,4 +1,3 @@
-[README.md](https://github.com/user-attachments/files/28066494/README.md)
 # Forge Card Favorites ❤️
 
 Small Stable Diffusion WebUI Forge extension that adds favorite toggles to Extra
