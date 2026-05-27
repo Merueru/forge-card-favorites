@@ -7,7 +7,6 @@ const favoriteState = {
 };
 
 let favoritesOnlyMode = false;
-let modalObserver = null;
 
 function uniqueFavorites(values) {
     const favorites = [];
@@ -109,8 +108,6 @@ function refreshFavoriteButtons() {
 }
 
 function toggleFavoriteForButton(button) {
-    if (document.body.classList.contains("forge-favorites-modal-open")) return;
-
     const card = button.closest(".card");
     if (!card) return;
 
@@ -154,28 +151,6 @@ function updateFavoritesFilterButtons() {
         btn.style.filter = favoritesOnlyMode ? "drop-shadow(0 0 6px rgba(255,80,120,0.75))" : "none";
         btn.title = favoritesOnlyMode ? "Showing favorites only" : "Favorites only";
     });
-}
-
-function refreshModalState() {
-    const modalOpen = Array.from(gradioApp().querySelectorAll(".edit-user-metadata")).some((modal) => {
-        const style = window.getComputedStyle(modal);
-        return style.display !== "none" && style.visibility !== "hidden" && modal.offsetParent !== null;
-    });
-
-    document.body.classList.toggle("forge-favorites-modal-open", modalOpen);
-}
-
-function setupModalObserver() {
-    if (modalObserver) return;
-
-    modalObserver = new MutationObserver(refreshModalState);
-    modalObserver.observe(gradioApp(), {
-        childList: true,
-        subtree: true,
-        attributes: true,
-        attributeFilter: ["style", "class", "open"],
-    });
-    refreshModalState();
 }
 
 function injectFavoriteButtons() {
@@ -286,7 +261,6 @@ onUiLoaded(() => {
 
     setTimeout(() => {
         loadFavorites().then(() => {
-            setupModalObserver();
             createFavoritesButton();
             injectFavoriteButtons();
             refreshFavoriteButtons();
