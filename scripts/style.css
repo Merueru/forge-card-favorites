@@ -1,0 +1,4 @@
+.forge-favorites-modal-open .extra-network-cards .forge-favorite-btn {
+    display: none !important;
+    pointer-events: none !important;
+}
