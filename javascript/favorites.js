@@ -7,6 +7,7 @@ const favoriteState = {
 };
 
 let favoritesOnlyMode = false;
+let modalObserver = null;
 
 function uniqueFavorites(values) {
     const favorites = [];
@@ -107,6 +108,27 @@ function refreshFavoriteButtons() {
     });
 }
 
+function toggleFavoriteForButton(button) {
+    if (document.body.classList.contains("forge-favorites-modal-open")) return;
+
+    const card = button.closest(".card");
+    if (!card) return;
+
+    const cardName = button.dataset.favoriteName || getCardName(card);
+    if (!cardName) return;
+
+    if (favoriteState.favorites.has(cardName)) {
+        favoriteState.favorites.delete(cardName);
+    } else {
+        favoriteState.favorites.add(cardName);
+    }
+
+    setHeartState(button, favoriteState.favorites.has(cardName));
+    updateFavoritesFilterButtons();
+    applyFavoritesOnlyFilter();
+    saveFavoritesToServer().catch(() => {});
+}
+
 function applyFavoritesOnlyFilter() {
     const favorites = favoriteState.favorites;
 
@@ -134,6 +156,28 @@ function updateFavoritesFilterButtons() {
     });
 }
 
+function refreshModalState() {
+    const modalOpen = Array.from(gradioApp().querySelectorAll(".edit-user-metadata")).some((modal) => {
+        const style = window.getComputedStyle(modal);
+        return style.display !== "none" && style.visibility !== "hidden" && modal.offsetParent !== null;
+    });
+
+    document.body.classList.toggle("forge-favorites-modal-open", modalOpen);
+}
+
+function setupModalObserver() {
+    if (modalObserver) return;
+
+    modalObserver = new MutationObserver(refreshModalState);
+    modalObserver.observe(gradioApp(), {
+        childList: true,
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["style", "class", "open"],
+    });
+    refreshModalState();
+}
+
 function injectFavoriteButtons() {
     if (!favoriteState.loaded) {
         loadFavorites().then(() => {
@@ -158,12 +202,14 @@ function injectFavoriteButtons() {
         heart.style.position = "absolute";
         heart.style.top = "8px";
         heart.style.left = "8px";
-        heart.style.zIndex = "100";
+        heart.style.zIndex = "130";
         heart.style.fontSize = "24px";
         heart.style.cursor = "pointer";
         heart.style.userSelect = "none";
+        heart.style.pointerEvents = "auto";
         heart.style.textShadow = "0 0 5px black";
         heart.style.transition = "all 0.15s ease";
+        heart.dataset.favoriteName = cardName;
 
         setHeartState(heart, favoriteState.favorites.has(cardName));
 
@@ -178,18 +224,10 @@ function injectFavoriteButtons() {
         };
 
         heart.onclick = (e) => {
+            e.preventDefault();
             e.stopPropagation();
-
-            if (favoriteState.favorites.has(cardName)) {
-                favoriteState.favorites.delete(cardName);
-            } else {
-                favoriteState.favorites.add(cardName);
-            }
-
-            setHeartState(heart, favoriteState.favorites.has(cardName));
-            updateFavoritesFilterButtons();
-            applyFavoritesOnlyFilter();
-            saveFavoritesToServer().catch(() => {});
+            e.stopImmediatePropagation();
+            toggleFavoriteForButton(heart);
         };
 
         card.appendChild(heart);
@@ -236,8 +274,19 @@ function createFavoritesButton() {
 }
 
 onUiLoaded(() => {
+    gradioApp().addEventListener("click", (e) => {
+        const button = e.target.closest(".forge-favorite-btn");
+        if (!button) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        toggleFavoriteForButton(button);
+    }, true);
+
     setTimeout(() => {
         loadFavorites().then(() => {
+            setupModalObserver();
             createFavoritesButton();
             injectFavoriteButtons();
             refreshFavoriteButtons();
